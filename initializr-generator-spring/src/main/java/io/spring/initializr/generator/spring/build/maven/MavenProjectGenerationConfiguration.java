@@ -17,7 +17,6 @@
 package io.spring.initializr.generator.spring.build.maven;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 import io.spring.initializr.generator.buildsystem.BuildItemResolver;
 import io.spring.initializr.generator.buildsystem.maven.MavenBuild;
@@ -31,6 +30,7 @@ import io.spring.initializr.generator.project.ProjectGenerationConfiguration;
 import io.spring.initializr.generator.spring.build.BuildCustomizer;
 import io.spring.initializr.generator.spring.util.LambdaSafe;
 import io.spring.initializr.metadata.InitializrMetadata;
+import org.jspecify.annotations.Nullable;
 
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.annotation.Bean;
@@ -59,12 +59,12 @@ public class MavenProjectGenerationConfiguration {
 	@Bean
 	public MavenBuild mavenBuild(ObjectProvider<BuildItemResolver> buildItemResolver,
 			ObjectProvider<BuildCustomizer<?>> buildCustomizers) {
-		return createBuild(buildItemResolver.getIfAvailable(),
-				buildCustomizers.orderedStream().collect(Collectors.toList()));
+		return createBuild(buildItemResolver.getIfAvailable(), buildCustomizers.orderedStream().toList());
 	}
 
 	@SuppressWarnings("unchecked")
-	private MavenBuild createBuild(BuildItemResolver buildItemResolver, List<BuildCustomizer<?>> buildCustomizers) {
+	private MavenBuild createBuild(@Nullable BuildItemResolver buildItemResolver,
+			List<BuildCustomizer<?>> buildCustomizers) {
 		MavenBuild build = (buildItemResolver != null) ? new MavenBuild(buildItemResolver) : new MavenBuild();
 		LambdaSafe.callbacks(BuildCustomizer.class, buildCustomizers, build)
 			.invoke((customizer) -> customizer.customize(build));

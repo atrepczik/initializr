@@ -119,7 +119,9 @@ class ProjectGeneratorIntegrationTests {
 
 	private void runBuild(Path mavenHome, Path projectDirectory, MutableProjectDescription description)
 			throws InterruptedException, IOException {
-		ProcessBuilder processBuilder = createProcessBuilder(projectDirectory, description.getBuildSystem(), mavenHome);
+		BuildSystem buildSystem = description.getBuildSystem();
+		assertThat(buildSystem).isNotNull();
+		ProcessBuilder processBuilder = createProcessBuilder(projectDirectory, buildSystem, mavenHome);
 		Path output = projectDirectory.resolve("output.log");
 		processBuilder.redirectError(output.toFile());
 		processBuilder.redirectOutput(output.toFile());
@@ -144,7 +146,7 @@ class ProjectGeneratorIntegrationTests {
 		if (buildSystem.id().equals(GradleBuildSystem.ID)) {
 			String command = (isWindows()) ? "gradlew.bat" : "gradlew";
 			ProcessBuilder processBuilder = new ProcessBuilder(directory.resolve(command).toAbsolutePath().toString(),
-					"--no-daemon", "build");
+					"--no-daemon", "--info", "--console=plain", "build");
 			if (javaHome != null) {
 				processBuilder.environment().put("JAVA_HOME", javaHome);
 			}

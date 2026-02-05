@@ -18,12 +18,7 @@ package io.spring.initializr.web.mapper;
 
 import java.util.List;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.JsonNodeFactory;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.spring.initializr.generator.version.Version;
 import io.spring.initializr.generator.version.Version.Format;
 import io.spring.initializr.generator.version.VersionParser;
@@ -38,10 +33,16 @@ import io.spring.initializr.metadata.SingleSelectCapability;
 import io.spring.initializr.metadata.TextCapability;
 import io.spring.initializr.metadata.Type;
 import io.spring.initializr.metadata.TypeCapability;
+import org.jspecify.annotations.Nullable;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.node.ArrayNode;
+import tools.jackson.databind.node.JsonNodeFactory;
+import tools.jackson.databind.node.ObjectNode;
 
 import org.springframework.hateoas.TemplateVariable;
 import org.springframework.hateoas.TemplateVariables;
 import org.springframework.hateoas.UriTemplate;
+import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
 
 /**
@@ -80,7 +81,7 @@ public class InitializrMetadataV2JsonMapper implements InitializrMetadataJsonMap
 	}
 
 	@Override
-	public String write(InitializrMetadata metadata, String appUrl) {
+	public String write(InitializrMetadata metadata, @Nullable String appUrl) {
 		ObjectNode parent = nodeFactory.objectNode();
 		links(parent, metadata.getTypes().getContent(), appUrl);
 		dependencies(parent, metadata.getDependencies());
@@ -107,21 +108,21 @@ public class InitializrMetadataV2JsonMapper implements InitializrMetadataJsonMap
 	protected void customizeParent(ObjectNode parent, InitializrMetadata metadata) {
 	}
 
-	protected ObjectNode links(ObjectNode parent, List<Type> types, String appUrl) {
+	protected ObjectNode links(ObjectNode parent, List<Type> types, @Nullable String appUrl) {
 		ObjectNode content = nodeFactory.objectNode();
 		types.forEach((it) -> content.set(it.getId(), link(appUrl, it)));
 		parent.set("_links", content);
 		return content;
 	}
 
-	protected ObjectNode link(String appUrl, Type type) {
+	protected ObjectNode link(@Nullable String appUrl, Type type) {
 		ObjectNode result = nodeFactory.objectNode();
 		result.put("href", generateTemplatedUri(appUrl, type));
 		result.put("templated", true);
 		return result;
 	}
 
-	protected String generateTemplatedUri(String appUrl, Type type) {
+	protected String generateTemplatedUri(@Nullable String appUrl, Type type) {
 		String uri = (appUrl != null) ? appUrl + type.getAction() : type.getAction();
 		uri = uri + "?type=" + type.getId();
 		UriTemplate uriTemplate = UriTemplate.of(uri, getTemplateVariables(type));
@@ -136,7 +137,7 @@ public class InitializrMetadataV2JsonMapper implements InitializrMetadataJsonMap
 		ObjectNode dependencies = nodeFactory.objectNode();
 		dependencies.put("type", capability.getType().getName());
 		ArrayNode values = nodeFactory.arrayNode();
-		values.addAll(capability.getContent().stream().map(this::mapDependencyGroup).collect(Collectors.toList()));
+		values.addAll(capability.getContent().stream().map(this::mapDependencyGroup).toList());
 		dependencies.set("values", values);
 		parent.set(capability.getId(), dependencies);
 	}
@@ -149,7 +150,7 @@ public class InitializrMetadataV2JsonMapper implements InitializrMetadataJsonMap
 			type.put("default", defaultType.getId());
 		}
 		ArrayNode values = nodeFactory.arrayNode();
-		values.addAll(capability.getContent().stream().map(this::mapType).collect(Collectors.toList()));
+		values.addAll(capability.getContent().stream().map(this::mapType).toList());
 		type.set("values", values);
 		parent.set("type", type);
 	}
@@ -178,10 +179,11 @@ public class InitializrMetadataV2JsonMapper implements InitializrMetadataJsonMap
 		single.put("type", capability.getType().getName());
 		DefaultMetadataElement defaultType = capability.getDefault();
 		if (defaultType != null) {
+			Assert.state(defaultType.getId() != null, "'defaultType.getId()' must not be null");
 			single.put("default", defaultMapper.apply(defaultType.getId()));
 		}
 		ArrayNode values = nodeFactory.arrayNode();
-		values.addAll(capability.getContent().stream().map(valueMapper).collect(Collectors.toList()));
+		values.addAll(capability.getContent().stream().map(valueMapper).toList());
 		single.set("values", values);
 		parent.set(capability.getId(), single);
 	}
@@ -213,7 +215,7 @@ public class InitializrMetadataV2JsonMapper implements InitializrMetadataJsonMap
 		return result;
 	}
 
-	protected ObjectNode mapDependency(Dependency dependency) {
+	protected @Nullable ObjectNode mapDependency(Dependency dependency) {
 		if (dependency.getCompatibilityRange() == null) {
 			// only map the dependency if no compatibilityRange is set
 			return mapValue(dependency);
@@ -232,7 +234,9 @@ public class InitializrMetadataV2JsonMapper implements InitializrMetadataJsonMap
 
 	private ObjectNode mapVersionMetadata(MetadataElement value) {
 		ObjectNode result = nodeFactory.objectNode();
-		result.put("id", formatVersion(value.getId()));
+		String id = value.getId();
+		Assert.state(id != null, "'id' must not be null");
+		result.put("id", formatVersion(id));
 		result.put("name", value.getName());
 		return result;
 	}
@@ -244,7 +248,9 @@ public class InitializrMetadataV2JsonMapper implements InitializrMetadataJsonMap
 
 	protected ObjectNode mapValue(MetadataElement value) {
 		ObjectNode result = nodeFactory.objectNode();
-		result.put("id", value.getId());
+		String id = value.getId();
+		Assert.state(id != null, "'id' must not be null");
+		result.put("id", id);
 		result.put("name", value.getName());
 		if ((value instanceof Describable) && ((Describable) value).getDescription() != null) {
 			result.put("description", ((Describable) value).getDescription());

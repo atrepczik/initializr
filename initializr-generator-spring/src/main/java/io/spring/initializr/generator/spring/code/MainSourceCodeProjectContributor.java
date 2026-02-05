@@ -20,9 +20,10 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.function.Supplier;
-import java.util.stream.Collectors;
 
+import io.spring.initializr.generator.buildsystem.BuildSystem;
 import io.spring.initializr.generator.language.CompilationUnit;
+import io.spring.initializr.generator.language.Language;
 import io.spring.initializr.generator.language.SourceCode;
 import io.spring.initializr.generator.language.SourceCodeWriter;
 import io.spring.initializr.generator.language.TypeDeclaration;
@@ -31,6 +32,7 @@ import io.spring.initializr.generator.project.contributor.ProjectContributor;
 import io.spring.initializr.generator.spring.util.LambdaSafe;
 
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.util.Assert;
 
 /**
  * {@link ProjectContributor} for the application's main source code.
@@ -72,20 +74,24 @@ public class MainSourceCodeProjectContributor<T extends TypeDeclaration, C exten
 	public void contribute(Path projectRoot) throws IOException {
 		S sourceCode = this.sourceFactory.get();
 		String applicationName = this.description.getApplicationName();
-		C compilationUnit = sourceCode.createCompilationUnit(this.description.getPackageName(), applicationName);
+		Assert.state(applicationName != null, "'applicationName' must not be null");
+		String packageName = this.description.getPackageName();
+		Assert.state(packageName != null, "'packageName' must not be null");
+		C compilationUnit = sourceCode.createCompilationUnit(packageName, applicationName);
 		T mainApplicationType = compilationUnit.createTypeDeclaration(applicationName);
 		customizeMainApplicationType(mainApplicationType);
 		customizeMainCompilationUnit(compilationUnit);
 		customizeMainSourceCode(sourceCode);
-		this.sourceWriter.writeTo(
-				this.description.getBuildSystem().getMainSource(projectRoot, this.description.getLanguage()),
-				sourceCode);
+		BuildSystem buildSystem = this.description.getBuildSystem();
+		Assert.state(buildSystem != null, "'buildSystem' must not be null");
+		Language language = this.description.getLanguage();
+		Assert.state(language != null, "'language' must not be null");
+		this.sourceWriter.writeTo(buildSystem.getMainSource(projectRoot, language), sourceCode);
 	}
 
 	@SuppressWarnings("unchecked")
 	private void customizeMainApplicationType(T mainApplicationType) {
-		List<MainApplicationTypeCustomizer<?>> customizers = this.mainTypeCustomizers.orderedStream()
-			.collect(Collectors.toList());
+		List<MainApplicationTypeCustomizer<?>> customizers = this.mainTypeCustomizers.orderedStream().toList();
 		LambdaSafe.callbacks(MainApplicationTypeCustomizer.class, customizers, mainApplicationType)
 			.invoke((customizer) -> customizer.customize(mainApplicationType));
 	}
@@ -93,15 +99,14 @@ public class MainSourceCodeProjectContributor<T extends TypeDeclaration, C exten
 	@SuppressWarnings("unchecked")
 	private void customizeMainCompilationUnit(C compilationUnit) {
 		List<MainCompilationUnitCustomizer<?, ?>> customizers = this.mainCompilationUnitCustomizers.orderedStream()
-			.collect(Collectors.toList());
+			.toList();
 		LambdaSafe.callbacks(MainCompilationUnitCustomizer.class, customizers, compilationUnit)
 			.invoke((customizer) -> customizer.customize(compilationUnit));
 	}
 
 	@SuppressWarnings("unchecked")
 	private void customizeMainSourceCode(S sourceCode) {
-		List<MainSourceCodeCustomizer<?, ?, ?>> customizers = this.mainSourceCodeCustomizers.orderedStream()
-			.collect(Collectors.toList());
+		List<MainSourceCodeCustomizer<?, ?, ?>> customizers = this.mainSourceCodeCustomizers.orderedStream().toList();
 		LambdaSafe.callbacks(MainSourceCodeCustomizer.class, customizers, sourceCode)
 			.invoke((customizer) -> customizer.customize(sourceCode));
 	}

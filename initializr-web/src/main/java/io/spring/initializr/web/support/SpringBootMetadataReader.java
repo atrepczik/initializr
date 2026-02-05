@@ -16,18 +16,18 @@
 
 package io.spring.initializr.web.support;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ArrayNode;
 import io.spring.initializr.generator.version.Version;
 import io.spring.initializr.generator.version.Version.Qualifier;
 import io.spring.initializr.generator.version.VersionParser;
 import io.spring.initializr.metadata.DefaultMetadataElement;
+import org.jspecify.annotations.Nullable;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.json.JsonMapper;
+import tools.jackson.databind.node.ArrayNode;
 
 import org.springframework.web.client.RestTemplate;
 
@@ -45,13 +45,12 @@ class SpringBootMetadataReader {
 
 	/**
 	 * Parse the content of the metadata at the specified url.
-	 * @param objectMapper the object mapper
+	 * @param jsonMapper the object mapper
 	 * @param restTemplate the rest template
 	 * @param url the metadata URL
-	 * @throws IOException on load error
 	 */
-	SpringBootMetadataReader(ObjectMapper objectMapper, RestTemplate restTemplate, String url) throws IOException {
-		this.content = objectMapper.readTree(restTemplate.getForObject(url, String.class));
+	SpringBootMetadataReader(JsonMapper jsonMapper, RestTemplate restTemplate, String url) {
+		this.content = jsonMapper.readTree(restTemplate.getForObject(url, String.class));
 	}
 
 	/**
@@ -71,8 +70,8 @@ class SpringBootMetadataReader {
 		return list;
 	}
 
-	private DefaultMetadataElement parseVersionMetadata(JsonNode node) {
-		String versionId = node.get("version").textValue();
+	private @Nullable DefaultMetadataElement parseVersionMetadata(JsonNode node) {
+		String versionId = node.get("version").asString();
 		Version version = VersionParser.DEFAULT.safeParse(versionId);
 		if (version == null) {
 			return null;
@@ -118,8 +117,13 @@ class SpringBootMetadataReader {
 
 		@Override
 		public int compare(DefaultMetadataElement o1, DefaultMetadataElement o2) {
-			Version o1Version = versionParser.parse(o1.getId());
-			Version o2Version = versionParser.parse(o2.getId());
+			String o1Id = o1.getId();
+			String o2Id = o2.getId();
+			if (o1Id == null || o2Id == null) {
+				return 0;
+			}
+			Version o1Version = versionParser.parse(o1Id);
+			Version o2Version = versionParser.parse(o2Id);
 			return o1Version.compareTo(o2Version);
 		}
 

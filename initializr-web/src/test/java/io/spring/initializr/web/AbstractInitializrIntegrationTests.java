@@ -32,8 +32,6 @@ import java.util.Set;
 import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.spring.initializr.generator.test.project.ProjectStructure;
 import io.spring.initializr.web.AbstractInitializrIntegrationTests.Config;
 import io.spring.initializr.web.mapper.InitializrMetadataVersion;
@@ -44,15 +42,18 @@ import org.apache.commons.compress.archivers.zip.ZipFile;
 import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream;
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.io.TempDir;
 import org.skyscreamer.jsonassert.JSONAssert;
 import org.skyscreamer.jsonassert.JSONCompareMode;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.json.JsonMapper;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
+import org.springframework.boot.restclient.RestTemplateBuilder;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -74,9 +75,9 @@ public abstract class AbstractInitializrIntegrationTests {
 
 	protected static final MediaType CURRENT_METADATA_MEDIA_TYPE = InitializrMetadataVersion.V2_3.getMediaType();
 
-	private static final ObjectMapper objectMapper = new ObjectMapper();
+	private static final JsonMapper jsonMapper = JsonMapper.builder().build();
 
-	public Path folder;
+	private Path folder;
 
 	@Autowired
 	private RestTemplateBuilder restTemplateBuilder;
@@ -105,12 +106,7 @@ public abstract class AbstractInitializrIntegrationTests {
 	}
 
 	protected JsonNode parseJson(String text) {
-		try {
-			return objectMapper.readTree(text);
-		}
-		catch (IOException ex) {
-			throw new IllegalArgumentException("Invalid json", ex);
-		}
+		return jsonMapper.readTree(text);
 	}
 
 	protected void validateMetadata(ResponseEntity<String> response, MediaType mediaType, String version,
@@ -136,11 +132,11 @@ public abstract class AbstractInitializrIntegrationTests {
 		validateMetadata(response.getBody(), "2.3.0");
 	}
 
-	protected void validateDefaultMetadata(String json) {
+	protected void validateDefaultMetadata(@Nullable String json) {
 		validateMetadata(json, "2.1.0");
 	}
 
-	protected void validateMetadata(String json, String version) {
+	protected void validateMetadata(@Nullable String json, String version) {
 		try {
 			JSONObject expected = readMetadataJson(version);
 			JSONAssert.assertEquals(expected, new JSONObject(json), JSONCompareMode.STRICT);
@@ -198,11 +194,13 @@ public abstract class AbstractInitializrIntegrationTests {
 
 	protected ProjectStructure downloadZip(String context) {
 		byte[] body = downloadArchive(context).getBody();
+		assertThat(body).isNotNull();
 		return projectFromArchive(body);
 	}
 
 	protected ProjectStructure downloadTgz(String context) {
 		byte[] body = downloadArchive(context).getBody();
+		assertThat(body).isNotNull();
 		return tgzProjectAssert(body);
 	}
 
@@ -210,12 +208,12 @@ public abstract class AbstractInitializrIntegrationTests {
 		return this.restTemplate.getForEntity(createUrl(context), byte[].class);
 	}
 
-	protected ResponseEntity<String> invokeHome(String userAgentHeader, String... acceptHeaders) {
+	protected ResponseEntity<String> invokeHome(@Nullable String userAgentHeader, String @Nullable ... acceptHeaders) {
 		return execute("/", String.class, userAgentHeader, acceptHeaders);
 	}
 
-	protected <T> ResponseEntity<T> execute(String contextPath, Class<T> responseType, String userAgentHeader,
-			String... acceptHeaders) {
+	protected <T> ResponseEntity<T> execute(String contextPath, Class<T> responseType, @Nullable String userAgentHeader,
+			String @Nullable ... acceptHeaders) {
 		HttpHeaders headers = new HttpHeaders();
 		if (userAgentHeader != null) {
 			headers.set("User-Agent", userAgentHeader);

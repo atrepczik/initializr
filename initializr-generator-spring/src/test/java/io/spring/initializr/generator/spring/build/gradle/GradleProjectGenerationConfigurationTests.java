@@ -54,9 +54,9 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 class GradleProjectGenerationConfigurationTests {
 
-	private static final String GRADLE_8_VERSION = "8.14.3";
+	private static final String GRADLE_8_VERSION = "8.14.4";
 
-	private static final String GRADLE_9_VERSION = "9.2.1";
+	private static final String GRADLE_9_VERSION = "9.3.0";
 
 	private ProjectAssetTester projectTester;
 
@@ -175,18 +175,6 @@ class GradleProjectGenerationConfigurationTests {
 		assertThat(project).textFile("build.gradle")
 			.lines()
 			.containsSequence("tasks.named('test') {", "    useJUnitPlatform()", "}");
-	}
-
-	@Test
-	void testStarterExcludesVintageEngineWithCompatibleVersion() {
-		MutableProjectDescription description = new MutableProjectDescription();
-		description.setPlatformVersion(Version.parse("2.2.4.RELEASE"));
-		description.setLanguage(new JavaLanguage());
-		ProjectStructure project = this.projectTester.generate(description);
-		assertThat(project).textFile("build.gradle")
-			.lines()
-			.containsSequence("    testImplementation('org.springframework.boot:spring-boot-starter-test') {",
-					"        exclude group: 'org.junit.vintage', module: 'junit-vintage-engine'", "    }");
 	}
 
 	@Test

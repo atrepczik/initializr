@@ -21,10 +21,11 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.JsonNodeFactory;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.spring.initializr.metadata.Link;
+import org.jspecify.annotations.Nullable;
+import tools.jackson.databind.node.ArrayNode;
+import tools.jackson.databind.node.JsonNodeFactory;
+import tools.jackson.databind.node.ObjectNode;
 
 /**
  * Generate a json representation for {@link Link}.
@@ -46,7 +47,7 @@ public final class LinkMapper {
 	 */
 	public static ObjectNode mapLinks(List<Link> links) {
 		ObjectNode result = nodeFactory.objectNode();
-		Map<String, List<Link>> byRel = new LinkedHashMap<>();
+		Map<@Nullable String, List<Link>> byRel = new LinkedHashMap<>();
 		links.forEach((it) -> byRel.computeIfAbsent(it.getRel(), (k) -> new ArrayList<>()).add(it));
 		byRel.forEach((rel, l) -> {
 			if (l.size() == 1) {

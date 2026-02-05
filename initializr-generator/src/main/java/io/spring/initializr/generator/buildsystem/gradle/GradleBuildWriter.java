@@ -41,6 +41,7 @@ import io.spring.initializr.generator.buildsystem.PropertyContainer;
 import io.spring.initializr.generator.io.IndentingWriter;
 import io.spring.initializr.generator.language.Language;
 import io.spring.initializr.generator.version.VersionProperty;
+import org.jspecify.annotations.Nullable;
 
 /**
  * {@link GradleBuild} writer abstraction.
@@ -101,7 +102,7 @@ public abstract class GradleBuildWriter {
 			.values()
 			.filter(StandardGradlePlugin.class::isInstance)
 			.map(StandardGradlePlugin.class::cast)
-			.collect(Collectors.toList());
+			.toList();
 	}
 
 	/**
@@ -138,8 +139,7 @@ public abstract class GradleBuildWriter {
 	}
 
 	protected final void writeRepositories(IndentingWriter writer, GradleBuild build) {
-		writeNestedCollection(writer, "repositories", build.repositories().items().collect(Collectors.toList()),
-				this::repositoryAsString);
+		writeNestedCollection(writer, "repositories", build.repositories().items().toList(), this::repositoryAsString);
 	}
 
 	protected abstract String repositoryAsString(MavenRepository repository);
@@ -181,8 +181,8 @@ public abstract class GradleBuildWriter {
 		}
 	}
 
-	private Predicate<DependencyScope> hasScope(DependencyScope... validScopes) {
-		return (scope) -> Arrays.asList(validScopes).contains(scope);
+	private Predicate<@Nullable DependencyScope> hasScope(DependencyScope... validScopes) {
+		return (scope) -> scope != null && Arrays.asList(validScopes).contains(scope);
 	}
 
 	/**
@@ -224,7 +224,7 @@ public abstract class GradleBuildWriter {
 		List<BillOfMaterials> boms = build.boms()
 			.items()
 			.sorted(Comparator.comparingInt(BillOfMaterials::getOrder).reversed())
-			.collect(Collectors.toList());
+			.toList();
 		writer.println();
 		writer.println("dependencyManagement {");
 		writer.indented(() -> writeNestedCollection(writer, "imports", boms, this::bomAsString));
@@ -288,7 +288,7 @@ public abstract class GradleBuildWriter {
 	}
 
 	protected final <T> void writeNestedCollection(IndentingWriter writer, String name, Collection<T> collection,
-			Function<T, String> converter, Runnable beforeWriting) {
+			Function<T, String> converter, @Nullable Runnable beforeWriting) {
 		if (!collection.isEmpty()) {
 			if (beforeWriting != null) {
 				beforeWriting.run();
@@ -306,7 +306,7 @@ public abstract class GradleBuildWriter {
 	}
 
 	protected final <T> void writeCollection(IndentingWriter writer, Collection<T> collection,
-			Function<T, String> itemToStringConverter, Runnable beforeWriting) {
+			Function<T, String> itemToStringConverter, @Nullable Runnable beforeWriting) {
 		if (!collection.isEmpty()) {
 			if (beforeWriting != null) {
 				beforeWriting.run();
@@ -319,14 +319,14 @@ public abstract class GradleBuildWriter {
 		map.forEach((key, value) -> writer.println(converter.apply(key, value)));
 	}
 
-	protected abstract void writeProperty(IndentingWriter writer, String name, String value);
+	protected abstract void writeProperty(IndentingWriter writer, String name, @Nullable String value);
 
 	private Collection<Dependency> filterDependencies(DependencyContainer dependencies,
-			Predicate<DependencyScope> filter) {
+			Predicate<@Nullable DependencyScope> filter) {
 		return dependencies.items()
 			.filter((dep) -> filter.test(dep.getScope()))
 			.sorted(getDependencyComparator())
-			.collect(Collectors.toList());
+			.toList();
 	}
 
 	@SafeVarargs

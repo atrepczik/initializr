@@ -17,7 +17,6 @@
 package io.spring.initializr.generator.spring.build.gradle;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 import io.spring.initializr.generator.buildsystem.BuildItemResolver;
 import io.spring.initializr.generator.buildsystem.gradle.GradleBuild;
@@ -29,8 +28,8 @@ import io.spring.initializr.generator.buildsystem.gradle.KotlinDslGradleSettings
 import io.spring.initializr.generator.condition.ConditionalOnBuildSystem;
 import io.spring.initializr.generator.condition.ConditionalOnLanguage;
 import io.spring.initializr.generator.condition.ConditionalOnPackaging;
-import io.spring.initializr.generator.condition.ConditionalOnPlatformVersion;
 import io.spring.initializr.generator.io.IndentingWriterFactory;
+import io.spring.initializr.generator.language.Language;
 import io.spring.initializr.generator.language.groovy.GroovyLanguage;
 import io.spring.initializr.generator.language.java.JavaLanguage;
 import io.spring.initializr.generator.packaging.war.WarPackaging;
@@ -39,11 +38,13 @@ import io.spring.initializr.generator.project.ProjectGenerationConfiguration;
 import io.spring.initializr.generator.spring.build.BuildCustomizer;
 import io.spring.initializr.generator.spring.util.LambdaSafe;
 import io.spring.initializr.metadata.InitializrMetadata;
+import org.jspecify.annotations.Nullable;
 
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.Ordered;
+import org.springframework.util.Assert;
 
 /**
  * Configuration for contributions specific to the generation of a project that will use
@@ -71,12 +72,11 @@ public class GradleProjectGenerationConfiguration {
 	@Bean
 	public GradleBuild gradleBuild(ObjectProvider<BuildItemResolver> buildItemResolver,
 			ObjectProvider<BuildCustomizer<?>> buildCustomizers) {
-		return createGradleBuild(buildItemResolver.getIfAvailable(),
-				buildCustomizers.orderedStream().collect(Collectors.toList()));
+		return createGradleBuild(buildItemResolver.getIfAvailable(), buildCustomizers.orderedStream().toList());
 	}
 
 	@SuppressWarnings("unchecked")
-	private GradleBuild createGradleBuild(BuildItemResolver buildItemResolver,
+	private GradleBuild createGradleBuild(@Nullable BuildItemResolver buildItemResolver,
 			List<BuildCustomizer<?>> buildCustomizers) {
 		GradleBuild build = (buildItemResolver != null) ? new GradleBuild(buildItemResolver) : new GradleBuild();
 		LambdaSafe.callbacks(BuildCustomizer.class, buildCustomizers, build)
@@ -86,9 +86,11 @@ public class GradleProjectGenerationConfiguration {
 
 	@Bean
 	public BuildCustomizer<GradleBuild> defaultGradleBuildCustomizer(ProjectDescription description) {
-		return (build) -> build.settings()
-			.sourceCompatibility(description.getLanguage().jvmVersion())
-			.description(description.getDescription());
+		return (build) -> {
+			Language language = description.getLanguage();
+			Assert.state(language != null, "'language' must not be null");
+			build.settings().sourceCompatibility(language.jvmVersion()).description(description.getDescription());
+		};
 	}
 
 	@Bean
@@ -184,7 +186,6 @@ public class GradleProjectGenerationConfiguration {
 		}
 
 		@Bean
-		@ConditionalOnPlatformVersion("2.2.0.M3")
 		BuildCustomizer<GradleBuild> testTaskContributor() {
 			return BuildCustomizer.ordered(TEST_ORDER,
 					(build) -> build.tasks().customize("test", (test) -> test.invoke("useJUnitPlatform")));
@@ -217,7 +218,6 @@ public class GradleProjectGenerationConfiguration {
 		}
 
 		@Bean
-		@ConditionalOnPlatformVersion("2.2.0.M3")
 		BuildCustomizer<GradleBuild> testTaskContributor() {
 			return BuildCustomizer.ordered(TEST_ORDER,
 					(build) -> build.tasks().customizeWithType("Test", (test) -> test.invoke("useJUnitPlatform")));

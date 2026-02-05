@@ -19,11 +19,13 @@ package io.spring.initializr.metadata;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 import io.spring.initializr.generator.version.Version;
 import io.spring.initializr.generator.version.VersionParser;
 import io.spring.initializr.generator.version.VersionProperty;
+import org.jspecify.annotations.Nullable;
+
+import org.springframework.util.Assert;
 
 /**
  * Meta-data used to generate a project.
@@ -209,10 +211,11 @@ public class InitializrMetadata {
 	 */
 	public void updateSpringBootVersions(List<DefaultMetadataElement> versionsMetadata) {
 		this.bootVersions.setContent(versionsMetadata);
-		List<Version> bootVersions = this.bootVersions.getContent()
-			.stream()
-			.map((it) -> Version.parse(it.getId()))
-			.collect(Collectors.toList());
+		List<Version> bootVersions = this.bootVersions.getContent().stream().map((it) -> {
+			String id = it.getId();
+			Assert.state(id != null, "'id' must not be null");
+			return Version.parse(id);
+		}).toList();
 		VersionParser parser = new VersionParser(bootVersions);
 		this.dependencies.updateCompatibilityRange(parser);
 		this.configuration.getEnv().updateCompatibilityRange(parser);
@@ -248,8 +251,8 @@ public class InitializrMetadata {
 	 * Return the defaults for the capabilities defined on this instance.
 	 * @return the default capabilities
 	 */
-	public Map<String, Object> defaults() {
-		Map<String, Object> defaults = new LinkedHashMap<>();
+	public Map<String, @Nullable Object> defaults() {
+		Map<String, @Nullable Object> defaults = new LinkedHashMap<>();
 		defaults.put("type", defaultId(this.types));
 		defaults.put("bootVersion", defaultId(this.bootVersions));
 		defaults.put("packaging", defaultId(this.packagings));
@@ -265,7 +268,7 @@ public class InitializrMetadata {
 		return defaults;
 	}
 
-	private static String defaultId(Defaultable<? extends DefaultMetadataElement> element) {
+	private static @Nullable String defaultId(Defaultable<? extends DefaultMetadataElement> element) {
 		DefaultMetadataElement defaultValue = element.getDefault();
 		return (defaultValue != null) ? defaultValue.getId() : null;
 	}
@@ -280,7 +283,7 @@ public class InitializrMetadata {
 		}
 
 		@Override
-		public String getContent() {
+		public @Nullable String getContent() {
 			String value = super.getContent();
 			return (value != null) ? value : this.nameCapability.getContent();
 		}
@@ -300,7 +303,7 @@ public class InitializrMetadata {
 		}
 
 		@Override
-		public String getContent() {
+		public @Nullable String getContent() {
 			String value = super.getContent();
 			if (value != null) {
 				return value;

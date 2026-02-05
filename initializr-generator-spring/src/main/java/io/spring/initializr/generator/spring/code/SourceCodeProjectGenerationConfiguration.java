@@ -17,7 +17,6 @@
 package io.spring.initializr.generator.spring.code;
 
 import io.spring.initializr.generator.condition.ConditionalOnPackaging;
-import io.spring.initializr.generator.condition.ConditionalOnPlatformVersion;
 import io.spring.initializr.generator.language.ClassName;
 import io.spring.initializr.generator.language.TypeDeclaration;
 import io.spring.initializr.generator.packaging.war.WarPackaging;
@@ -27,6 +26,7 @@ import io.spring.initializr.generator.project.ProjectGenerationConfiguration;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.util.Assert;
 
 /**
  * Project generation configuration for projects written in any language.
@@ -62,10 +62,11 @@ public class SourceCodeProjectGenerationConfiguration {
 		}
 
 		@Bean
-		@ConditionalOnPlatformVersion("2.0.0.M1")
 		ServletInitializerContributor boot20ServletInitializerContributor(
 				ObjectProvider<ServletInitializerCustomizer<?>> servletInitializerCustomizers) {
-			return new ServletInitializerContributor(this.description.getPackageName(),
+			String packageName = this.description.getPackageName();
+			Assert.state(packageName != null, "'packageName' must not be null");
+			return new ServletInitializerContributor(packageName,
 					"org.springframework.boot.web.servlet.support.SpringBootServletInitializer",
 					servletInitializerCustomizers);
 		}

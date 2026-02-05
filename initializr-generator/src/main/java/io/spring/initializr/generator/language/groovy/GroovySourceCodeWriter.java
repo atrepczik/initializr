@@ -47,6 +47,7 @@ import io.spring.initializr.generator.language.Parameter;
 import io.spring.initializr.generator.language.SourceCode;
 import io.spring.initializr.generator.language.SourceCodeWriter;
 import io.spring.initializr.generator.language.SourceStructure;
+import org.jspecify.annotations.Nullable;
 
 import org.springframework.util.CollectionUtils;
 
@@ -256,7 +257,7 @@ public class GroovySourceCodeWriter implements SourceCodeWriter<GroovySourceCode
 	}
 
 	private <T> List<String> appendImports(Stream<T> candidates, Function<T, Collection<String>> mapping) {
-		return candidates.map(mapping).flatMap(Collection::stream).collect(Collectors.toList());
+		return candidates.map(mapping).flatMap(Collection::stream).toList();
 	}
 
 	private String getUnqualifiedName(String name) {
@@ -266,7 +267,7 @@ public class GroovySourceCodeWriter implements SourceCodeWriter<GroovySourceCode
 		return name.substring(name.lastIndexOf(".") + 1);
 	}
 
-	private boolean isImportCandidate(CompilationUnit<?> compilationUnit, String name) {
+	private boolean isImportCandidate(CompilationUnit<?> compilationUnit, @Nullable String name) {
 		if (name == null || !name.contains(".")) {
 			return false;
 		}

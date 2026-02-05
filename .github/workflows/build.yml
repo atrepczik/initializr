@@ -36,6 +36,13 @@ jobs:
           distribution: 'liberica'
           cache: 'maven'
 
+      - name: Set up JDK 25
+        uses: actions/setup-java@v5
+        with:
+          java-version: '25'
+          distribution: 'liberica'
+          cache: 'maven'
+
       - name: Maven verify
         if: ${{ !matrix.runner.deploy-snapshots }}
         run: ./mvnw --no-transfer-progress --batch-mode --update-snapshots -Pfull install

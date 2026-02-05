@@ -26,9 +26,11 @@ import io.spring.initializr.generator.condition.ConditionalOnPlatformVersion;
 import io.spring.initializr.generator.packaging.war.WarPackaging;
 import io.spring.initializr.generator.project.ProjectDescription;
 import io.spring.initializr.generator.project.ProjectGenerationConfiguration;
+import io.spring.initializr.generator.version.Version;
 import io.spring.initializr.metadata.InitializrMetadata;
 
 import org.springframework.context.annotation.Bean;
+import org.springframework.util.Assert;
 
 /**
  * Project generation configuration for projects using any build system.
@@ -39,16 +41,6 @@ import org.springframework.context.annotation.Bean;
  */
 @ProjectGenerationConfiguration
 public class BuildProjectGenerationConfiguration {
-
-	@Bean
-	@ConditionalOnPlatformVersion("[2.2.0.M5,2.4.0-SNAPSHOT)")
-	public BuildCustomizer<Build> junit5TestStarterContributor() {
-		return (build) -> build.dependencies()
-			.add("test",
-					Dependency.withCoordinates("org.springframework.boot", "spring-boot-starter-test")
-						.scope(DependencyScope.TEST_COMPILE)
-						.exclusions(new Dependency.Exclusion("org.junit.vintage", "junit-vintage-engine")));
-	}
 
 	@Bean
 	@ConditionalOnPlatformVersion("[2.4.0-M1, 4.0.0-RC1)")
@@ -98,7 +90,9 @@ public class BuildProjectGenerationConfiguration {
 
 	@Bean
 	public SpringBootVersionRepositoriesBuildCustomizer repositoriesBuilderCustomizer(ProjectDescription description) {
-		return new SpringBootVersionRepositoriesBuildCustomizer(description.getPlatformVersion());
+		Version platformVersion = description.getPlatformVersion();
+		Assert.state(platformVersion != null, "'platformVersion' must not be null");
+		return new SpringBootVersionRepositoriesBuildCustomizer(platformVersion);
 	}
 
 }
